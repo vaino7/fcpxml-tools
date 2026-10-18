@@ -7,4 +7,5 @@ This script is designed to fix subtitles mismatches and it does so by analyzing 
 A marker is also set when keywords (like "EMPHASIS") are found in the original subtitles, allowing the editor to quickly spot them on the timeline.
 
 ## What's next?
+- [ ] Develop subtitle.py
 - [ ] Create a tool that automatically places footage in the timeline based on the keyowords and timings (this tool should be called 'media-to-subs-syncronizer.py' or something like that)
