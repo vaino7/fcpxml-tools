@@ -15,6 +15,7 @@ from pathlib import Path
 from lxml import etree
 from lxml.etree import _Element, _ElementTree
 from marker import FCPMarker
+from subtitle import Subtitle
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -69,10 +70,11 @@ def fixXML(xmlParsed: _ElementTree, subsNodes: list, fixedSubtitles:list, name):
         #logger.info(text_style_node[0].text)
         handle_metatags(node)
         last_node: _Element =node
+        
     last_node_siblings: list[_Element] = last_node.xpath("./following-sibling::title")
 
     last_node_siblings_text = [node.get("name") for node in last_node_siblings]
-    logger.info(f'Sono stati trovati sottotitoli in avanzo che sono stati eliminati: {last_node_siblings_text}')
+    logger.info(f'There are left-overs which have been deleted: {last_node_siblings_text}')
 
     duration=int(last_node.get('duration').split('/')[0])
     for sibling in last_node_siblings:
@@ -85,25 +87,22 @@ def fixXML(xmlParsed: _ElementTree, subsNodes: list, fixedSubtitles:list, name):
     # marker = FCPMarker(last_node, last_node.get("start"),"marker-vs-code")
     # marker.add_marker_to_timeline()
 
-    output_path = Path(f'{name}.fcpxml')
+    output_path = Path(f'./test/{name}.fcpxml')
     xmlParsed.write(output_path, encoding='utf-8', xml_declaration=True)
 
 
 if __name__ == "__main__":
-    fcp_xml_timeline=Path('fcp.fcpxml')
-    real_subtitles_path=Path('subtitles.txt')
+    fcp_xml_timeline=Path('./test/fcp.fcpxml')
+    real_subtitles_path=Path('./test/subtitles.txt')
     parsed_xml=etree.parse(fcp_xml_timeline)
     
     AI_generated_subs_nodes=extractSubtitlesFromXML(parsed_xml)
     AI_generated_subs_nodes_text=[node.get("name") for node in AI_generated_subs_nodes] #prendo attributo invece del testo diretto perché sono uguali
-    #logger.info(f"Sottotitoli estratti da XML: {AI_generated_subs_nodes_text}")
 
     
     real_subtitles_list=real_subtitles_path.read_text('utf-8').split(' ')
-    # logger.info(f"Sottotitoli estratti da {real_subtitles_path}: {real_subtitles_list}")
 
     fixed_subs=fixSubtitles(real_subtitles_list, AI_generated_subs_nodes_text)
-    # logger.info(f"Sottotitoli corretti in {fixed_subs}")
 
     filename= f"fixed_{datetime.datetime.now().strftime('%H_%M_%S')}"
     fixXML(parsed_xml, AI_generated_subs_nodes,fixed_subs, filename)
