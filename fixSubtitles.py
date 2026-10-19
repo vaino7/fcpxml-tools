@@ -69,8 +69,11 @@ def fixXML(xmlParsed: _ElementTree, subsNodes: list, fixedSubtitles:list, name):
         text_style_node[0].text=fixedSub
         #logger.info(text_style_node[0].text)
         handle_metatags(node)
+        subtitle_class=Subtitle(node)
+        logger.info(f'Offset in timecode format: {subtitle_class.getTimecodeOffset(50, 3600)}')
         last_node: _Element =node
-        
+
+    
     last_node_siblings: list[_Element] = last_node.xpath("./following-sibling::title")
 
     last_node_siblings_text = [node.get("name") for node in last_node_siblings]
