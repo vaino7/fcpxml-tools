@@ -1,3 +1,4 @@
+from decimal import DivisionByZero
 import logging
 import sys
 
@@ -26,9 +27,12 @@ class Subtitle:
         self.ref=titleNode.get('ref')
         self.lane=titleNode.get('lane')
         self.offset=titleNode.get('offset')
+        self._offset_parsed=[]
         self.name=titleNode.get('name')
         self.start=titleNode.get('start')
+        self._start_parsed=[]
         self.duration=titleNode.get('duration')
+        self._duration_parsed=[]
         self.role=titleNode.get('role')
 
         self.marker: _Element=titleNode.xpath('./following-sibling::marker')
@@ -56,6 +60,7 @@ class Subtitle:
             """
             tmp_offset = offset.replace('s','')
             parts = [p for p in tmp_offset.split('/')]
+            self._offset_parsed=parts
             logger.debug(parts)
             if all(p.isdigit() for p in parts):
                 self.offset=offset
@@ -75,6 +80,7 @@ class Subtitle:
             """
             tmp_start = start.replace('s','')
             parts = [p for p in tmp_start.split('/')]
+            self._start_parsed=parts
             logger.debug(parts)
             if all(p.isdigit() for p in parts):
                 self.start=start
@@ -88,6 +94,7 @@ class Subtitle:
             """
             tmp_duration = duration.replace('s','')
             parts=[p for p in tmp_duration.split('/')]
+            self._duration_parsed=parts
             logger.debug(parts)
             if all(p.isdigit() for p in parts):      
                 self.duration=duration
@@ -101,4 +108,34 @@ class Subtitle:
             self.role=role
             self.node.set('role', self.role)
 
-    
+
+    def getTimecodeOffset(self, framerate, parentTime):
+        """
+        This function returns the offset value with respect to the parent node
+        """
+        try:
+            tmp_offset = self.offset.replace('s','')
+            parts = [int(p) for p in tmp_offset.split('/')]
+            self._offset_parsed=parts
+            logger.debug(self._offset_parsed)
+            if len(self._offset_parsed)==1:
+                 absolute_sec=self._offset_parsed[0]
+            else:
+                 absolute_sec=self._offset_parsed[0]/self._offset_parsed[1]
+
+            relative_sec = absolute_sec-float(parentTime)
+            total_int_sec=int(relative_sec)
+            decimal_part=relative_sec-total_int_sec
+
+            hours = total_int_sec // 3600
+            remainder = total_int_sec % 3600
+            minutes = remainder // 60
+            seconds = remainder % 60
+
+            frames= (round(decimal_part*framerate))
+            timecode_str = f"{hours:02d}:{minutes:02d}:{seconds:02d}:{frames:02d}"
+            value = f'Offset in seconds: {relative_sec:.2f}. Which is {timecode_str} in (HH:MM:SS:FF)'
+            logger.debug(value)
+            return value
+        except DivisionByZero:
+            raise SubtitleError('Division by zero happened here')
