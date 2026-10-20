@@ -107,6 +107,6 @@ if __name__ == "__main__":
 
     fixed_subs=fixSubtitles(real_subtitles_list, AI_generated_subs_nodes_text)
 
-    filename= f"fixed_{datetime.datetime.now().strftime('%H_%M_%S')}"
+    filename= f"fixed_{datetime.datetime.now().strftime('%H_%M_%S__%d_%m_%y')}"
     fixXML(parsed_xml, AI_generated_subs_nodes,fixed_subs, filename)
 
