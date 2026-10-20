@@ -8,4 +8,5 @@ A marker is also set when keywords (like "EMPHASIS") are found in the original s
 
 ## What's next?
 - [ ] Develop subtitle.py
+- [ ] Create a tool that understands the most significant words in the subtitles and generates a list of keywords that can be used to search for footage in the media library. NLP has to be used here, yake (https://pypi.org/project/yake/) might be a good candidate for the job.
 - [ ] Create a tool that automatically places footage in the timeline based on the keyowords and timings (this tool should be called 'media-to-subs-syncronizer.py' or something like that)
