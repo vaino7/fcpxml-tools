@@ -2,7 +2,7 @@
 
 # fcpxml-tools
 This repository contains tools that help editors streamline their workflow by manipulating FCP XML files. The tools are designed to work with the XML structure, applying logic and heuristics to enhance the editing process.
-
+</div>
 ---
 
 ## Roadmap
