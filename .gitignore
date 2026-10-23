@@ -223,3 +223,6 @@ __marimo__/
 test/
 custom_en_stopword.txt
 .DS_Store
+.vscode/settings.json
+kw_suggestions.txt
+kw_file.txt
