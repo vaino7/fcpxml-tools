@@ -1,7 +1,13 @@
+import json
 import logging
+import os
 import re
 import sys
+from pathlib import Path
+import time
+from urllib.parse import urlencode
 
+import requests
 import yake
 
 logger = logging.getLogger(__name__)
@@ -11,10 +17,10 @@ _formatter = logging.Formatter("%(levelname)s at %(asctime)s | %(filename)s | %(
 _streamHandler.setFormatter(_formatter)
 logger.addHandler(_streamHandler)
 
-def analyzeChapter(chapter_text: str, lang='en', num_of_keywords=100):
+def analyzeChapter(chapter_text: str, lang='en', num_of_keywords=100, ngrams=3):
     clean_text = re.sub(r"\[.*?\]", "", chapter_text)
     
-    kw_extractor = yake.KeywordExtractor(lan=lang, top=num_of_keywords)
+    kw_extractor = yake.KeywordExtractor(lan=lang, top=num_of_keywords, n=ngrams)
     kw=kw_extractor.extract_keywords(clean_text)
     return kw
 
@@ -34,22 +40,58 @@ def mswPerSentence(chapter: str, keywords: list, k=2):
                 candidates.append({
                     "keyword": kw,
                     "score": score,
-                    "position": match.start()
+                    "position": match.start(),
                 })
 
-        # Step 1: Select the top-k most significant (lowest score = highest relevance)
         candidates.sort(key=lambda x: x["score"])
         top_k = candidates[:k]
 
-        # Step 2: Re-sort the top-k subset chronologically by position
+        # re-sort the top-k subset chronologically by position
         top_k.sort(key=lambda x: x["position"])
 
         results.append({
             "sentence": sentence,
-            "keywords": [(item["keyword"], item["score"]) for item in top_k]
+            "keywords": [(item["keyword"], item["score"]) for item in top_k],
+            "img-id": [item['keyword'] for item in top_k]
         })
 
     return results
+
+def createKeywordFile(msw: list[dict]):
+    # This function should create the file that contains the keywords for the creator to look up
+    kw_file = Path('kw_file.txt')
+    kw = [elem for item in msw for elem in item['img-id']]
+    kw_file.write_text('\n'.join(kw))
+    return kw
+
+def getSuggestions(keywords:list, lang: str = 'en'):
+    # This function should return suggestions for which media to download using pixabay 
+    kw_suggestion_file = Path('kw_suggestions.txt')
+    api_key = os.getenv("PIXABAY_API_KEY")
+    endpoint = os.getenv("PIXABAY_URL")
+    if not api_key:
+        logger.warning("No PIXABAY API Key has been found, thus no suggestions will be generated")
+        return
+    if not endpoint:
+            logger.warning("No endpoint has been found, thus no suggestions will be generated")
+            return
+    res = {}
+    for kw in keywords:
+
+        params = {
+            'key': api_key,
+            'lang': lang,
+            'q': kw,
+        }
+        results = requests.get(endpoint, params=params)
+        logger.debug(f'Sent request for {kw}')
+        res[kw]=results.json()
+        time.sleep(0.4)
+
+    kw_suggestion_file.write_text(json.dumps(res, indent=2))
+    
+    return results
+
     
 
 if __name__ == "__main__":
@@ -58,8 +100,10 @@ if __name__ == "__main__":
     In 2010, inside the underground enrichment plant at Natanz, Iran, roughly a thousand centrifuges destroyed themselves while the control room screens showed normal operations. The malware, later identified as Stuxnet and built jointly by the US and Israel, had hijacked the facility's programmable logic controllers. It replayed twenty-one seconds of recorded telemetry in a continuous loop so technicians saw stable pressure and nominal speeds while the rotors spun out of control. 
     Stuxnet was the first confirmed digital weapon engineered to destroy physical infrastructure, the same industrial control architecture that governs civilian electrical grids today. That line of development traces back to software written with no destructive intent: the 1971 Creeper program, an experimental script that migrated across early ARPANET systems to display the message, "I'm the creeper, catch me if you can!"""
 
-    kw=analyzeChapter(chapter)
-    # logger.debug(sentences)
-    for item in mswPerSentence(chapter, kw):
-        print(item)
+    kw=analyzeChapter(chapter, ngrams=1)
+    results = mswPerSentence(chapter, kw, k=3)
+    kw_list= createKeywordFile(results)
+    logger.debug(getSuggestions(kw_list).json())
 
+
+# Consider using https://pixabay.com/api/docs/ for autodownload
