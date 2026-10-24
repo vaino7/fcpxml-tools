@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 import time
 from urllib.parse import urlencode
+from dotenv import load_dotenv
 
 import requests
 import yake
@@ -16,6 +17,9 @@ _streamHandler = logging.StreamHandler(sys.stdout)
 _formatter = logging.Formatter("%(levelname)s at %(asctime)s | %(filename)s | %(funcName)s >> %(message)s")
 _streamHandler.setFormatter(_formatter)
 logger.addHandler(_streamHandler)
+
+env_file = Path('.env')
+load_dotenv(env_file)
 
 def analyzeChapter(chapter_text: str, lang='en', num_of_keywords=100, ngrams=3):
     clean_text = re.sub(r"\[.*?\]", "", chapter_text)
@@ -64,11 +68,11 @@ def createKeywordFile(msw: list[dict]):
     kw_file.write_text('\n'.join(kw))
     return kw
 
-def getSuggestions(keywords:list, lang: str = 'en'):
+def getSuggestions(keywords:list, lang: str = 'en', numOfSuggestions= 3, searchImages: bool = True):
     # This function should return suggestions for which media to download using pixabay 
     kw_suggestion_file = Path('kw_suggestions.txt')
     api_key = os.getenv("PIXABAY_API_KEY")
-    endpoint = os.getenv("PIXABAY_URL")
+    endpoint = os.getenv("PIXABAY_IMAGES_URL") if searchImages else os.getenv("PIXABAY_VIDEOS_URL")
     if not api_key:
         logger.warning("No PIXABAY API Key has been found, thus no suggestions will be generated")
         return
@@ -84,8 +88,13 @@ def getSuggestions(keywords:list, lang: str = 'en'):
             'q': kw,
         }
         results = requests.get(endpoint, params=params)
+        results.raise_for_status()
+        data: dict = results.json()
+        data['hits'] = sorted(data['hits'], key= lambda x: x['downloads'])
+        data['hits'] = data.get('hits',[])[:numOfSuggestions]
         logger.debug(f'Sent request for {kw}')
-        res[kw]=results.json()
+
+        res[kw]=data
         time.sleep(0.4)
 
     kw_suggestion_file.write_text(json.dumps(res, indent=2))
@@ -103,7 +112,7 @@ if __name__ == "__main__":
     kw=analyzeChapter(chapter, ngrams=1)
     results = mswPerSentence(chapter, kw, k=3)
     kw_list= createKeywordFile(results)
-    logger.debug(getSuggestions(kw_list).json())
+    logger.debug(getSuggestions(kw_list))
 
 
 # Consider using https://pixabay.com/api/docs/ for autodownload
