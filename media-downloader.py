@@ -8,7 +8,9 @@ import time
 from urllib.parse import urlencode
 from dotenv import load_dotenv
 
+from pydantic import BaseModel
 import requests
+from ollama import chat
 import yake
 
 logger = logging.getLogger(__name__)
@@ -68,9 +70,9 @@ def createKeywordFile(msw: list[dict]):
     kw_file.write_text('\n'.join(kw))
     return kw
 
-def getSuggestions(keywords:list, lang: str = 'en', numOfSuggestions= 3, searchImages: bool = True):
+def getFootageSuggestions(synonymous:list, ngrams, lang: str = 'en', numOfSuggestions= 3, searchImages: bool = True):
     # This function should return suggestions for which media to download using pixabay 
-    kw_suggestion_file = Path('kw_suggestions.txt')
+    kw_suggestion_file = Path(f'kw_{'images' if searchImages else 'videos'}_suggestions_with{ngrams}ngrams.txt')
     api_key = os.getenv("PIXABAY_API_KEY")
     endpoint = os.getenv("PIXABAY_IMAGES_URL") if searchImages else os.getenv("PIXABAY_VIDEOS_URL")
     if not api_key:
@@ -80,7 +82,7 @@ def getSuggestions(keywords:list, lang: str = 'en', numOfSuggestions= 3, searchI
             logger.warning("No endpoint has been found, thus no suggestions will be generated")
             return
     res = {}
-    for kw in keywords:
+    for kw in synonymous:
 
         params = {
             'key': api_key,
@@ -101,7 +103,24 @@ def getSuggestions(keywords:list, lang: str = 'en', numOfSuggestions= 3, searchI
     
     return results
 
+def getSynonymous (encoded_keywords: str):
+    """This function asks the local llama3.2:3b (pretty lightweight) for search-engines suggestions about the keyword
+    """
+    model='fcpxml-llama3.2-keyword-expert'
+    messages=[{
+        'role': 'user',
+        'content': encoded_keywords
+    }]
+
+    class Keyword_Item(BaseModel):
+        keyword: str
+        suggestions: list[str]
+    class Suggestions(BaseModel):
+        results: list[Keyword_Item]
     
+    response = chat(model=model,messages=messages, format=Suggestions.model_json_schema())
+    structured_response = Suggestions.model_validate_json(response.message.content)
+    logger.debug(structured_response.results)
 
 if __name__ == "__main__":
     
@@ -109,10 +128,9 @@ if __name__ == "__main__":
     In 2010, inside the underground enrichment plant at Natanz, Iran, roughly a thousand centrifuges destroyed themselves while the control room screens showed normal operations. The malware, later identified as Stuxnet and built jointly by the US and Israel, had hijacked the facility's programmable logic controllers. It replayed twenty-one seconds of recorded telemetry in a continuous loop so technicians saw stable pressure and nominal speeds while the rotors spun out of control. 
     Stuxnet was the first confirmed digital weapon engineered to destroy physical infrastructure, the same industrial control architecture that governs civilian electrical grids today. That line of development traces back to software written with no destructive intent: the 1971 Creeper program, an experimental script that migrated across early ARPANET systems to display the message, "I'm the creeper, catch me if you can!"""
 
-    kw=analyzeChapter(chapter, ngrams=1)
+    kw=analyzeChapter(chapter, ngrams=3)
     results = mswPerSentence(chapter, kw, k=3)
     kw_list= createKeywordFile(results)
-    logger.debug(getSuggestions(kw_list))
-
-
-# Consider using https://pixabay.com/api/docs/ for autodownload
+    logger.debug(kw_list)
+    # logger.debug(getSuggestions(kw_list,3))
+    getSynonymous('#@#'.join(kw_list))
