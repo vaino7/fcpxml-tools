@@ -1,12 +1,29 @@
+<div align="center">
+
 # fcpxml-tools
-The main purpose of this repository is to give everyone tools that catalyze editors' process. They entirely work with the XML file so it's pure logic + heuristics + xml manipulation
+This repository contains tools that help editors streamline their workflow by manipulating FCP XML files. The tools are designed to work with the XML structure, applying logic and heuristics to enhance the editing process.
+</div>
 
-## Subtitle-Fixer `fixSubtitle.py`
-This script is designed to fix subtitles mismatches and it does so by analyzing the subtitles generated within FCP and comparing them to the original ones: the idea is to find the starting and ending word of the generated subtitles and substitute them with the original ones but within the same timecode of the first error.
 
-A marker is also set when keywords (like "EMPHASIS") are found in the original subtitles, allowing the editor to quickly spot them on the timeline.
+## Roadmap
+- [ ] Develop this amazing readme
+- [ ] Enhance media-whisper.py 
 
-## What's next?
-- [ ] Develop subtitle.py
-- [ ] Create a tool that understands the most significant words in the subtitles and generates a list of keywords that can be used to search for footage in the media library. NLP has to be used here, yake (https://pypi.org/project/yake/) might be a good candidate for the job.
-- [ ] Create a tool that automatically places footage in the timeline based on the keyowords and timings (this tool should be called 'media-to-subs-syncronizer.py' or something like that)
+---
+
+## Contributing
+
+Contributions, issues, and feature requests are welcome!  
+Feel free to check [issues page](https://github.com/vaino7/fcpxml-tools/issues).
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
+
+## License
+
+Distributed under the GPL-3 License. See `LICENSE` for more information.
