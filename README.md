@@ -7,7 +7,7 @@ This repository contains tools that help editors streamline their workflow by ma
 
 ## Roadmap
 - [ ] Develop this amazing readme
-- [ ] Enhance media-downloader.py to support auto download of media files from the internet based on the best keywords extracted from them through yake. 
+- [ ] Enhance media-whisper.py 
 
 ---
 
