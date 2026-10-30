@@ -1,17 +1,21 @@
+from asyncio import timeout
 import json
 import logging
 import os
 import re
 import sys
-from pathlib import Path
 import time
+import uuid
+from pathlib import Path
 from urllib.parse import urlencode
-from dotenv import load_dotenv
 
-from pydantic import BaseModel
+import ollama
 import requests
-from ollama import chat
 import yake
+from dotenv import load_dotenv
+from pydantic import BaseModel
+
+from ollama import chat
 
 logger = logging.getLogger(__name__)
 logger.level=logging.DEBUG
@@ -19,6 +23,11 @@ _streamHandler = logging.StreamHandler(sys.stdout)
 _formatter = logging.Formatter("%(levelname)s at %(asctime)s | %(filename)s | %(funcName)s >> %(message)s")
 _streamHandler.setFormatter(_formatter)
 logger.addHandler(_streamHandler)
+
+client = ollama.Client(
+    host='http://localhost:11434',
+    timeout=100
+)
 
 env_file = Path('.env')
 load_dotenv(env_file)
@@ -63,12 +72,48 @@ def mswPerSentence(chapter: str, keywords: list, k=2):
 
     return results
 
+def indexFootage(keywords):
+    """This function takes in input the most significant ngrams and parses them in order to get a unique id to use for naming the footage
+
+    Args:
+        keywords (list[str]): the list of keywords
+    """
+    unique_filename_list: list[str] = [f"{kw.lower().replace(' ','_')}_{uuid.uuid4()}" for kw in keywords]
+    logger.debug(unique_filename_list)
+    return unique_filename_list
+
 def createKeywordFile(msw: list[dict]):
     # This function should create the file that contains the keywords for the creator to look up
     kw_file = Path('kw_file.txt')
     kw = [elem for item in msw for elem in item['img-id']]
-    kw_file.write_text('\n'.join(kw))
-    return kw
+
+    # Create a dict that will contain keyword's metadata
+    indexed_list =indexFootage(kw)
+
+    # the llm expects a query in the format: "KEYWORD: [keyword]"
+    logger.debug("Buildin up the array of synon, gimme some time, thanks")
+    kw_synon = [getSynonymous(f"KEYWORD: {keyword}") for keyword in kw]
+    logger.debug("Array of synon has been built")
+    if len(kw) != len(indexed_list) != len(kw_synon.results):
+        logger.error("There's a mismatch in lists length")
+        logger.error("No kewyord file has been created")
+        return
+
+    logger.debug(f"Original kw length: {len(kw)}")
+    logger.debug(f"Synon kw length: {len(kw_synon)}")
+    
+    kw_dict={}
+    for i, kw_idx in enumerate(indexed_list):
+        kw_dict[kw_idx] = {
+            'id': kw_idx,
+            'name': kw[i],
+            'synonymous': kw_synon[i].suggestions
+        }
+
+    # kw_file.write_text('\n'.join(kw))
+
+    kw_file.write_text(json.dumps(kw_dict, indent=2), 'utf-8')
+    return kw_dict
 
 def getFootageSuggestions(synonymous:list, ngrams, lang: str = 'en', numOfSuggestions= 3, searchImages: bool = True):
     # This function should return suggestions for which media to download using pixabay 
@@ -103,24 +148,27 @@ def getFootageSuggestions(synonymous:list, ngrams, lang: str = 'en', numOfSugges
     
     return results
 
-def getSynonymous (encoded_keywords: str):
-    """This function asks the local llama3.2:3b (pretty lightweight) for search-engines suggestions about the keyword
-    """
+
+
+def getSynonymous (encoded_keyword: str):
+    """This function asks the local llama3.2:3b (pretty lightweight) for search-engines suggestions about the keyword"""
+
     model='fcpxml-llama3.2-keyword-expert'
     messages=[{
         'role': 'user',
-        'content': encoded_keywords
+        'content': encoded_keyword
     }]
 
     class Keyword_Item(BaseModel):
         keyword: str
         suggestions: list[str]
-    class Suggestions(BaseModel):
-        results: list[Keyword_Item]
+
     
-    response = chat(model=model,messages=messages, format=Suggestions.model_json_schema())
-    structured_response = Suggestions.model_validate_json(response.message.content)
-    logger.debug(structured_response.results)
+    # response = chat(model=model,messages=messages, format=Keyword_Item.model_json_schema(), ti)
+    response = client.chat(model=model,messages=messages, format=Keyword_Item.model_json_schema())
+    structured_response = Keyword_Item.model_validate_json(response.message.content)
+    logger.debug(f"Generated: {structured_response}")
+    return structured_response
 
 if __name__ == "__main__":
     
@@ -132,5 +180,6 @@ if __name__ == "__main__":
     results = mswPerSentence(chapter, kw, k=3)
     kw_list= createKeywordFile(results)
     logger.debug(kw_list)
+    # indexFootage(kw_list)
     # logger.debug(getSuggestions(kw_list,3))
-    getSynonymous('#@#'.join(kw_list))
+    #getSynonymous('#@#'.join(kw_list))

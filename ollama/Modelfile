@@ -15,5 +15,5 @@ STRICT NEGATIVE RULES:
 - NEVER use subjective or qualitative adverbs that search engines cannot see (e.g., "normally", "successfully", "properly", "efficiently").
 - No full sentences: return only concise search queries of 2 to 5 descriptive words.
 
-Input keywords are separated by '#@#'. Output valid structured items matching the requested schema.
+Your expected input is: "KEYWORD: [keyword]"
 """
