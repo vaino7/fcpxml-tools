@@ -170,16 +170,44 @@ def getSynonymous (encoded_keyword: str):
     logger.debug(f"Generated: {structured_response}")
     return structured_response
 
+def footageCheck():
+    """This function checks the footage nomenclature is respected within /video folder"""
+    video_folder = Path('..') / 'video'
+    kw_file = Path('kw_file.txt')
+    if not kw_file.exists():
+        logger.error(f'{kw_file} does not exist')
+        return False
+    with open(kw_file, 'r') as f:
+        kw_content: dict = json.load(f)
+    
+    footage_ids = kw_content.keys()
+    video_folder_content = []
+    for file in video_folder.iterdir():
+        if file.is_file():
+            video_folder_content.append(file.stem)
+
+    logger.debug(f"Content of {video_folder}: {video_folder_content}")
+    missing_files=[]
+    for id in footage_ids:
+        if id not in video_folder_content:
+            missing_files.append(id)
+
+    logger.debug(missing_files)
+    return len(missing_files)==0
+
+
 if __name__ == "__main__":
     
     chapter="""
     In 2010, inside the underground enrichment plant at Natanz, Iran, roughly a thousand centrifuges destroyed themselves while the control room screens showed normal operations. The malware, later identified as Stuxnet and built jointly by the US and Israel, had hijacked the facility's programmable logic controllers. It replayed twenty-one seconds of recorded telemetry in a continuous loop so technicians saw stable pressure and nominal speeds while the rotors spun out of control. 
     Stuxnet was the first confirmed digital weapon engineered to destroy physical infrastructure, the same industrial control architecture that governs civilian electrical grids today. That line of development traces back to software written with no destructive intent: the 1971 Creeper program, an experimental script that migrated across early ARPANET systems to display the message, "I'm the creeper, catch me if you can!"""
 
-    kw=analyzeChapter(chapter, ngrams=3)
-    results = mswPerSentence(chapter, kw, k=3)
-    kw_list= createKeywordFile(results)
-    logger.debug(kw_list)
+    # kw=analyzeChapter(chapter, ngrams=3)
+    # results = mswPerSentence(chapter, kw, k=3)
+    # kw_list= createKeywordFile(results)
+    # logger.debug(kw_list)
     # indexFootage(kw_list)
     # logger.debug(getSuggestions(kw_list,3))
     #getSynonymous('#@#'.join(kw_list))
+    sanity_check = footageCheck()
+    print(sanity_check)
