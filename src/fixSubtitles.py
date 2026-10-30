@@ -14,8 +14,8 @@ from pathlib import Path
 
 from lxml import etree
 from lxml.etree import _Element, _ElementTree
-from marker import FCPMarker
-from subtitle import Subtitle
+from src.marker import FCPMarker
+from src.subtitle import Subtitle
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
