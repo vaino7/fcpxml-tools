@@ -1,8 +1,7 @@
-from decimal import DivisionByZero
 import logging
 import sys
+from decimal import DivisionByZero
 
-from lxml import etree
 from lxml.etree import _Element
 
 logger = logging.getLogger(__name__)
