@@ -1,21 +1,11 @@
-import logging
-import sys
 from decimal import DivisionByZero
 
 from lxml.etree import _Element
 
-logger = logging.getLogger(__name__)
-logger.level=logging.DEBUG
-_streamHandler = logging.StreamHandler(sys.stdout)
-_formatter = logging.Formatter("%(levelname)s at %(asctime)s | %(filename)s | %(funcName)s >> %(message)s")
-_streamHandler.setFormatter(_formatter)
-logger.addHandler(_streamHandler)
+from src.core.exceptions import SubtitleError
+from src.core.logger import get_logger
 
-class SubtitleError(Exception):
-      def __init__(self, message):
-            self.message=message
-            super().__init__(self.message)
-
+logger = get_logger(__name__)
 
 class Subtitle:
     """

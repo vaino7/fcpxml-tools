@@ -1,15 +1,10 @@
-import logging
-import sys
 
 from lxml import etree
 from lxml.etree import _Element
 
-logger = logging.getLogger(__name__)
-logger.level=logging.DEBUG
-_streamHandler = logging.StreamHandler(sys.stdout)
-_formatter = logging.Formatter("%(levelname)s at %(asctime)s | %(filename)s | %(funcName)s >> %(message)s")
-_streamHandler.setFormatter(_formatter)
-logger.addHandler(_streamHandler)
+from src.core.logger import get_logger
+
+logger = get_logger(__name__)
 
 class FCPMarker:
     def __init__(self, parentNode: _Element, start: str, value:str, duration: str = '100/5000s'):

@@ -1,36 +1,23 @@
-from asyncio import timeout
 import json
-import logging
-import os
 import re
-import sys
 import time
 import uuid
 from pathlib import Path
-from urllib.parse import urlencode
 
-import ollama
 import requests
 import yake
-from dotenv import load_dotenv
 from pydantic import BaseModel
 
-from ollama import chat
+import ollama
+from src.core.config import Config
+from src.core.logger import get_logger
 
-logger = logging.getLogger(__name__)
-logger.level=logging.DEBUG
-_streamHandler = logging.StreamHandler(sys.stdout)
-_formatter = logging.Formatter("%(levelname)s at %(asctime)s | %(filename)s | %(funcName)s >> %(message)s")
-_streamHandler.setFormatter(_formatter)
-logger.addHandler(_streamHandler)
+logger = get_logger(__name__)
 
 client = ollama.Client(
-    host='http://localhost:11434',
+    host=Config.OLLAMA_ENDPOINT,
     timeout=100
 )
-
-env_file = Path('.env')
-load_dotenv(env_file)
 
 def analyzeChapter(chapter_text: str, lang='en', num_of_keywords=100, ngrams=3):
     clean_text = re.sub(r"\[.*?\]", "", chapter_text)
@@ -118,8 +105,8 @@ def createKeywordFile(msw: list[dict]):
 def getFootageSuggestions(synonymous:list, ngrams, lang: str = 'en', numOfSuggestions= 3, searchImages: bool = True):
     # This function should return suggestions for which media to download using pixabay 
     kw_suggestion_file = Path(f'kw_{'images' if searchImages else 'videos'}_suggestions_with{ngrams}ngrams.txt')
-    api_key = os.getenv("PIXABAY_API_KEY")
-    endpoint = os.getenv("PIXABAY_IMAGES_URL") if searchImages else os.getenv("PIXABAY_VIDEOS_URL")
+    api_key = Config.PIXABAY_API_KEY
+    endpoint = Config.PIXABAY_IMAGES_URL if searchImages else Config.PIXABAY_VIDEOS_URL
     if not api_key:
         logger.warning("No PIXABAY API Key has been found, thus no suggestions will be generated")
         return

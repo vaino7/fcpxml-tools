@@ -1,20 +1,15 @@
 from pathlib import Path
 from urllib.parse import unquote
-import sys
 
 from lxml import etree
 from lxml.etree import _Element
-import logging
 
+from src.core.exceptions import SanityCheckException
+from src.core.logger import get_logger
 
-logger = logging.getLogger(__name__)
-logger.level=logging.DEBUG
-_streamHandler = logging.StreamHandler(sys.stdout)
-_formatter = logging.Formatter("%(levelname)s at %(asctime)s | %(filename)s | %(funcName)s >> %(message)s")
-_streamHandler.setFormatter(_formatter)
-logger.addHandler(_streamHandler)
+logger = get_logger(__name__)
 
-class Asset():
+class Asset:
     def __init__(self, parent: _Element):
         self.parent = parent
 
@@ -74,13 +69,11 @@ class Asset():
             }
             media_rep_node = etree.SubElement(asset_node, 'media-rep', attrib=media_rep_attributes)
             return asset_node, media_rep_node
-        except SanityCheckException as e:
+        except SanityCheckException:
             logger.debug("Sanity check failed, please check the values")
-        except Exception:
-            logger.debug("Something strange happened here")
 
     
-class Footage():
+class Footage:
     def __init__(self):
         pass
 
@@ -103,8 +96,3 @@ class Footage():
     def addAsAsset(self):
         """This method should add the media to the 'asset' section of the xml
         """
-
-class SanityCheckException(Exception):
-      def __init__(self, message):
-            self.message=message
-            super().__init__(self.message)
