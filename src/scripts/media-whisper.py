@@ -1,10 +1,8 @@
 import json
 import re
-import time
 import uuid
 from pathlib import Path
 
-import requests
 import yake
 from pydantic import BaseModel
 
@@ -13,6 +11,8 @@ from src.core.config import Config
 from src.core.logger import get_logger
 
 logger = get_logger(__name__)
+MEDIA_DIR = Path(f'{Config.MEDIA_FILE_DIR}')
+MEDIA_DIR.mkdir(exist_ok=True)
 
 client = ollama.Client(
     host=Config.OLLAMA_ENDPOINT,
@@ -66,6 +66,9 @@ def indexFootage(keywords):
         keywords (list[str]): the list of keywords
     """
     unique_filename_list: list[str] = [f"{kw.lower().replace(' ','_')}_{uuid.uuid4()}" for kw in keywords]
+    for name in unique_filename_list:
+        filename_path = MEDIA_DIR / f'{name}.jpg'
+        filename_path.touch()
     logger.debug(unique_filename_list)
     return unique_filename_list
 
@@ -97,44 +100,8 @@ def createKeywordFile(msw: list[dict]):
             'synonymous': kw_synon[i].suggestions
         }
 
-    # kw_file.write_text('\n'.join(kw))
-
     kw_file.write_text(json.dumps(kw_dict, indent=2), 'utf-8')
     return kw_dict
-
-def getFootageSuggestions(synonymous:list, ngrams, lang: str = 'en', numOfSuggestions= 3, searchImages: bool = True):
-    # This function should return suggestions for which media to download using pixabay 
-    kw_suggestion_file = Path(f'kw_{'images' if searchImages else 'videos'}_suggestions_with{ngrams}ngrams.txt')
-    api_key = Config.PIXABAY_API_KEY
-    endpoint = Config.PIXABAY_IMAGES_URL if searchImages else Config.PIXABAY_VIDEOS_URL
-    if not api_key:
-        logger.warning("No PIXABAY API Key has been found, thus no suggestions will be generated")
-        return
-    if not endpoint:
-            logger.warning("No endpoint has been found, thus no suggestions will be generated")
-            return
-    res = {}
-    for kw in synonymous:
-
-        params = {
-            'key': api_key,
-            'lang': lang,
-            'q': kw,
-        }
-        results = requests.get(endpoint, params=params)
-        results.raise_for_status()
-        data: dict = results.json()
-        data['hits'] = sorted(data['hits'], key= lambda x: x['downloads'])
-        data['hits'] = data.get('hits',[])[:numOfSuggestions]
-        logger.debug(f'Sent request for {kw}')
-
-        res[kw]=data
-        time.sleep(0.4)
-
-    kw_suggestion_file.write_text(json.dumps(res, indent=2))
-    
-    return results
-
 
 
 def getSynonymous (encoded_keyword: str):
@@ -151,36 +118,10 @@ def getSynonymous (encoded_keyword: str):
         suggestions: list[str]
 
     
-    # response = chat(model=model,messages=messages, format=Keyword_Item.model_json_schema(), ti)
     response = client.chat(model=model,messages=messages, format=Keyword_Item.model_json_schema())
     structured_response = Keyword_Item.model_validate_json(response.message.content)
     logger.debug(f"Generated: {structured_response}")
     return structured_response
-
-def footageCheck():
-    """This function checks the footage nomenclature is respected within /video folder"""
-    video_folder = Path('..') / 'video'
-    kw_file = Path('kw_file.txt')
-    if not kw_file.exists():
-        logger.error(f'{kw_file} does not exist')
-        return False
-    with open(kw_file, 'r') as f:
-        kw_content: dict = json.load(f)
-    
-    footage_ids = kw_content.keys()
-    video_folder_content = []
-    for file in video_folder.iterdir():
-        if file.is_file():
-            video_folder_content.append(file.stem)
-
-    logger.debug(f"Content of {video_folder}: {video_folder_content}")
-    missing_files=[]
-    for id in footage_ids:
-        if id not in video_folder_content:
-            missing_files.append(id)
-
-    logger.debug(missing_files)
-    return len(missing_files)==0
 
 
 if __name__ == "__main__":
@@ -189,12 +130,10 @@ if __name__ == "__main__":
     In 2010, inside the underground enrichment plant at Natanz, Iran, roughly a thousand centrifuges destroyed themselves while the control room screens showed normal operations. The malware, later identified as Stuxnet and built jointly by the US and Israel, had hijacked the facility's programmable logic controllers. It replayed twenty-one seconds of recorded telemetry in a continuous loop so technicians saw stable pressure and nominal speeds while the rotors spun out of control. 
     Stuxnet was the first confirmed digital weapon engineered to destroy physical infrastructure, the same industrial control architecture that governs civilian electrical grids today. That line of development traces back to software written with no destructive intent: the 1971 Creeper program, an experimental script that migrated across early ARPANET systems to display the message, "I'm the creeper, catch me if you can!"""
 
-    # kw=analyzeChapter(chapter, ngrams=3)
-    # results = mswPerSentence(chapter, kw, k=3)
-    # kw_list= createKeywordFile(results)
+    kw=analyzeChapter(chapter, ngrams=3)
+    results = mswPerSentence(chapter, kw, k=3)
+    kw_list= createKeywordFile(results)
     # logger.debug(kw_list)
     # indexFootage(kw_list)
     # logger.debug(getSuggestions(kw_list,3))
     #getSynonymous('#@#'.join(kw_list))
-    sanity_check = footageCheck()
-    print(sanity_check)
